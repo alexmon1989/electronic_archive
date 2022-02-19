@@ -72,28 +72,29 @@ def document_get_source_files_path(json_data: dict) -> Path:
     return path
 
 
-def document_write_to_db(json_data: dict, uuid: str, storage_path: Path) -> None:
-    """Записывает данные документа в БД."""
-    # Проверка есть ли уже запись с этим guid
+def document_is_in_db(uuid: str) -> bool:
+    """Проверяет есть ли документ в БД."""
     db_cursor.execute("select COUNT(*) from ls_uuid_doc where uuid=?", uuid)
     row = db_cursor.fetchone()
-    if row[0] == 0:
-        query = 'insert into ls_uuid_doc(uuid, id_system, id_obj_type, generate_date, storage_path, reg_date, save_date) ' \
-                'values (?, ?, ?, ?, ?, ?, ?)'
-        db_cursor.execute(
-            query,
+    return row[0] == 1
 
-            uuid,
-            SYSTEM_CODE,
-            OBJ_TYPES_IDS[json_data['Claim']['TypeCode']['Code']],
-            None,
-            str(storage_path).replace(DEST_BASE_CATALOG, ''),
-            None,
-            datetime.datetime.now()
-        )
-        db_cursor.commit()
-    else:
-        print(f"Запис з uuid={uuid} вже існує у БД.")
+
+def document_write_to_db(json_data: dict, uuid: str, storage_path: Path) -> None:
+    """Записывает данные документа в БД."""
+    query = 'insert into ls_uuid_doc(uuid, id_system, id_obj_type, generate_date, storage_path, reg_date, save_date) ' \
+            'values (?, ?, ?, ?, ?, ?, ?)'
+    db_cursor.execute(
+        query,
+
+        uuid,
+        SYSTEM_CODE,
+        OBJ_TYPES_IDS[json_data['Claim']['TypeCode']['Code']],
+        None,
+        str(storage_path).replace(DEST_BASE_CATALOG, ''),
+        None,
+        datetime.datetime.now()
+    )
+    db_cursor.commit()
 
 
 def file_create_dest_path(catalog_title: str) -> Path:
@@ -145,41 +146,46 @@ def file_cp_document_and_p7s(from_path: Path, to_path: Path, filename: str) -> N
 
 def document_process(json_data: dict) -> bool:
     """Обрабатывает документ."""
+    # Проверка есть ли в БД этот документ и того что есть данные о заявке
+    if document_is_in_db(json_data['Guid']):
+        return False
+
     if 'Claim' in json_data and json_data['Claim'] is not None:
         # Создание каталога на целевом сервере
-        try:
-            dest_path = file_create_dest_path(json_data['Guid'])
-        except KeyError:
-            pass
-        else:
-            # Сохранение json документа на целевой сервер
-            file_create_from_json(json_data, dest_path / f"{json_data['Guid']}.json")
+        dest_path = file_create_dest_path(json_data['Guid'])
 
-            # Сохранение тела документа (файла и его p7s) на целевой сервер
-            from_path = document_get_source_files_path(json_data)
-            file_cp_document_and_p7s(from_path, dest_path, json_data['File']['FileName'])
+        # Сохранение json документа на целевой сервер
+        file_create_from_json(json_data, dest_path / f"{json_data['Guid']}.json")
 
-            # Запись в БД
-            document_write_to_db(json_data, json_data['Guid'], dest_path)
-            return True
+        # Сохранение тела документа (файла и его p7s) на целевой сервер
+        from_path = document_get_source_files_path(json_data)
+        file_cp_document_and_p7s(from_path, dest_path, json_data['File']['FileName'])
+
+        # Запись в БД
+        document_write_to_db(json_data, json_data['Guid'], dest_path)
+        return True
 
     print(f"Документ {json_data['Guid']} - відсутня секція Claim, обробка неможлива.")
     return False
 
 
-def claim_process_new_claim(json_data: dict) -> None:
+def claim_process_new_claim(json_data: dict) -> bool:
     """Записывает новую заявку в файловое хранилище и БД."""
-    # Создание каталога на целевом сервере
-    dest_path = file_create_dest_path(json_data['Claim']['Guid'])
+    if not document_is_in_db(json_data['Claim']['Guid']):
+        # Создание каталога на целевом сервере
+        dest_path = file_create_dest_path(json_data['Claim']['Guid'])
 
-    # Полный путь к файлу json
-    dest_path = dest_path / f"{json_data['Claim']['Guid']}.json"
+        # Полный путь к файлу json
+        dest_path = dest_path / f"{json_data['Claim']['Guid']}.json"
 
-    # Сохранение json документа на целевой сервер
-    file_create_from_json(json_data, dest_path)
+        # Сохранение json документа на целевой сервер
+        file_create_from_json(json_data, dest_path)
 
-    # Запись в БД
-    document_write_to_db(json_data, json_data['Claim']['Guid'], dest_path)
+        # Запись в БД
+        document_write_to_db(json_data, json_data['Claim']['Guid'], dest_path)
+
+        return True
+    return False
 
 
 def document_get_secondary_documents(url: str = None, date_from: str = None, page: int = None) -> list:

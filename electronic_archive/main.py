@@ -27,8 +27,8 @@ def main():
     # Обработка новых заявок - сохранение их данных и данных их документов
     for claim in new_claims:
         # Запись новой заявки в БД и её json в файловое хранилище
-        claim_process_new_claim(claim)
-        doc_count_primary += 1
+        if claim_process_new_claim(claim):
+            doc_count_primary += 1
 
         documents = claim.get('ClaimDocuments', [])
         for doc in documents:
