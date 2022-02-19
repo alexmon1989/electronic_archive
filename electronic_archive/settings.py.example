@@ -1,0 +1,31 @@
+"""
+Основные настройки приложения.
+"""
+
+# Параметры доступа к API ЕКЗ (документация - http://95.67.17.50:3006/api/)
+API_BASE_URL = ''
+API_AUTH_TOKEN = ''
+
+SOURCE_BASE_CATALOG = 'D:\\projects\\electronic_archive\\files\\source'
+DEST_BASE_CATALOG = 'D:\\projects\\electronic_archive\\files\\dest'
+
+
+DB_HOST = ''
+DB_PORT = ''
+DB_USER = ''
+DB_PASSWORD = ''
+DB_NAME = ''
+DB_CONNECTION_DRIVER = '{ODBC Driver 11 for SQL Server}'
+
+OBJ_TYPES_IDS = {
+    'TRADEMARK_NATIONAL': 2,
+    'TRADEMARK_MADRID': 14,
+    'INDUSTRIAL_DESIGN_NATIONAL': 3,
+    'INVENTION_NATIONAL': 1,
+    'ARR_SEMI_PRODUCT_NATIONAL': 9,  # ???
+    'INVENTION_INTERNATIONAL_PCT': 1,
+    'USEFUL_MODEL_NATIONAL': 8,
+    'GEOGRAPHICAL_INDICATION_NATIONAL': 5
+}
+
+SYSTEM_CODE = 10001
