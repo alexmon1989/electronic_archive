@@ -9,12 +9,12 @@ def main():
     try:
         date_from = datetime.strptime(sys.argv[1], '%Y-%m-%d').strftime('%Y-%m-%d')
         if date_from == datetime.now().strftime('%Y-%m-%d'):
-            exit('Error: you must use previous date.')
+            exit('Помилка: ви маєте вказати минулу дату.')
     except IndexError:
         yesterday = datetime.now() - timedelta(days=1)
         date_from = yesterday.strftime('%Y-%m-%d')
     except ValueError:
-        exit('Error: wrong date format. Correct is yyyy-mm-dd')
+        exit('Помилка: невірний формат дати, вірний - yyyy-mm-dd')
 
     print(f'Імпорт документів із ЄКЗ починаючи з дати: {date_from}')
 
